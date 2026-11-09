@@ -1,19 +1,18 @@
-// Adds a "Копировать" button to every code block, makes inline commands
-// click-to-copy, and enables smooth TOC highlighting.
+// Adds a copy button to every code block.
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("pre").forEach((pre) => {
     const btn = document.createElement("button");
     btn.className = "copy-btn";
-    btn.textContent = "Копировать";
+    btn.textContent = "Copy";
     btn.addEventListener("click", async () => {
       const code = pre.querySelector("code");
       const text = code ? code.innerText : pre.innerText;
       try {
         await navigator.clipboard.writeText(text);
-        btn.textContent = "Скопировано";
-        setTimeout(() => (btn.textContent = "Копировать"), 1500);
+        btn.textContent = "Copied";
+        setTimeout(() => (btn.textContent = "Copy"), 1500);
       } catch {
-        btn.textContent = "Ошибка";
+        btn.textContent = "Error";
       }
     });
     pre.appendChild(btn);
