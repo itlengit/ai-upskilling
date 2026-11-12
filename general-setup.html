@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Course setup — access and tools</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container">
+        <span class="brand"><a href="index.html">← AI Upskilling</a></span>
+        <nav>
+          <a href="#dial">DIAL</a>
+          <a href="#codemie">CodeMie</a>
+          <a href="#copilot">GitHub Copilot</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="container">
+      <section class="module-hero">
+        <span class="num">Setup guide</span>
+        <h1>Get access to course tools</h1>
+        <p>
+          Before starting the exercises, get a DIAL key to call models through
+          the API and access to two AI coding assistants: CodeMie and
+          GitHub Copilot.
+        </p>
+      </section>
+
+      <main>
+        <article class="task" id="dial">
+          <span class="chip">1</span>
+          <h2>DIAL API key</h2>
+          <p>You need this key to call models from your exercise code.</p>
+          <ol>
+            <li>
+              Open
+              <a href="https://query.lab.epam.com/go/6aedabca1957c8781b0b1c03/support.epam.com/ess?id=sc_cat_item_guide&amp;sys_id=25ea7ee0c35d56107509583bb00131a7" target="_blank"
+                >EPAM DIAL Service in the Support Portal</a
+              >
+              and select <strong>Request DIAL API Key</strong>.
+            </li>
+            <li>Once your request is approved, copy the key you receive.</li>
+            <li>
+              Install Node.js 20.6 or later. Create an
+              <code>.env</code> file in the module folder and add these settings,
+              replacing the placeholder with your key:
+              <pre><code>DIAL_API_KEY=your_key
+DIAL_ENDPOINT=https://ai-proxy.lab.epam.com
+DIAL_MODEL=gpt-4.1-mini-2025-04-14
+DIAL_API_VERSION=2024-02-15-preview</code></pre>
+            </li>
+            <li>
+              Add <code>.env</code> to <code>.gitignore</code>.
+            </li>
+            <li>
+              Run your code with the environment file:
+              <pre><code>node --env-file=.env index.js</code></pre>
+              Access the settings through <code>process.env</code>,
+              for example <code>process.env.DIAL_API_KEY</code>.
+            </li>
+          </ol>
+          <div class="note">
+            Never publish your key or commit it to Git.
+          </div>
+        </article>
+
+        <article class="task" id="codemie">
+          <span class="chip">2</span>
+          <h2>CodeMie CLI</h2>
+          <p>
+            <a href="https://github.com/codemie-ai/codemie-code" target="_blank">CodeMie CLI</a>
+            is a command-line tool for working with CodeMie AI assistants.
+          </p>
+          <ol>
+            <li>Install Node.js 20 or later.</li>
+            <li>
+              Install the CLI:
+              <pre><code>npm install -g @codemieai/code</code></pre>
+            </li>
+            <li>
+              Run the setup wizard and sign in with EPAM SSO:
+              <pre><code>codemie setup</code></pre>
+            </li>
+            <li>
+              Check your setup:
+              <pre><code>codemie doctor</code></pre>
+            </li>
+            <li>
+              Choose a coding assistant, install it, and launch it from your
+              project folder (you only need one):
+              <p><strong>Claude Code</strong></p>
+              <pre><code>codemie install claude --supported
+codemie-claude</code></pre>
+              <p><strong>OpenAI Codex</strong></p>
+              <pre><code>codemie install codex --supported
+codemie-codex</code></pre>
+              <p><strong>Gemini CLI</strong></p>
+              <pre><code>codemie install gemini
+codemie-gemini</code></pre>
+              For more assistants and launch options, see the
+              <a href="https://github.com/codemie-ai/codemie-code#external-agents" target="_blank">CodeMie README</a>.
+            </li>
+          </ol>
+        </article>
+
+        <article class="task" id="copilot">
+          <span class="chip">3</span>
+          <h2>GitHub Copilot</h2>
+          <ol>
+            <li>
+              Open
+              <a href="https://onehub.epam.com/telescope/ai/search" target="_blank"
+                >EPAM Telescope — AI</a
+              >
+              and search for GitHub Copilot.
+            </li>
+            <li>Request access and wait for approval.</li>
+            <li>
+              Sign in to GitHub with your work account linked to EPAM and
+              install the GitHub Copilot extension in VS Code.
+            </li>
+          </ol>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

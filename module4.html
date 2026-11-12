@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Модуль 4 — Evals и tracing</title>
+    <title>Module 4 — Evals and tracing</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -11,354 +11,863 @@
       <div class="container">
         <span class="brand"><a href="index.html">← AI Upskilling</a></span>
         <nav>
+          <a href="#preparation">Preparation</a>
+          <a href="#theory">Theory</a>
           <a href="#t1">4.1</a>
           <a href="#t2">4.2</a>
           <a href="#t3">4.3</a>
           <a href="#t4">4.4</a>
           <a href="#t5">4.5</a>
+          <a href="#final">Final task</a>
         </nav>
       </div>
     </div>
 
     <div class="container">
       <section class="module-hero">
-        <span class="num">Модуль 4</span>
-        <h1>Evals и tracing</h1>
+        <span class="num">Module 4</span>
+        <h1>Evals and tracing</h1>
         <p>
-          «Кажется, отвечает неплохо» — это не метрика. В этом модуле вы
-          построите набор проверочных вопросов, посчитаете объективные метрики,
-          подключите LLM-судью и добавите трассировку, чтобы видеть путь каждого
-          запроса.
+          “The answers seem good” is not a metric. In this module, you will build
+          a small evaluation dataset for KnowledgeBot, calculate metrics, add
+          your own LLM judge, and trace requests in Langfuse. The final task
+          brings these pieces together into a short bot evaluation pipeline.
+          An extended LLMOps playbook is optional.
         </p>
         <div class="note">
-          Используем KnowledgeBot из модулей 1–3. Для LLM-судьи —
-          <code>llm_client.py</code>.
+          <strong>How to complete this module.</strong> Required: tasks 4.1–4.4
+          and the final task. Allow about 2 hours 45 minutes, plus up to
+          30 minutes for preparation and some buffer. Pairwise comparison in
+          4.3 and task 4.5 are optional and are not included in the 4-hour limit.
+        </div>
+        <div class="note">
+          <strong>How your work is checked.</strong> Try each task, check the
+          acceptance criteria, then open the sample solution. Submit the final
+          task against its acceptance table: your code,
+          <code>eval/report.json</code>, and two test traces in Langfuse.
         </div>
       </section>
 
       <div class="layout">
         <aside class="toc">
-          <h4>Задания модуля</h4>
-          <ol>
-            <li><a href="#t1">Набор проверочных вопросов</a></li>
-            <li><a href="#t2">Метрики качества</a></li>
-            <li><a href="#t3">LLM-as-a-Judge</a></li>
-            <li><a href="#t4">Трассировка запроса</a></li>
-            <li><a href="#t5">Observability</a></li>
+          <h4>Contents</h4>
+          <ol class="plain">
+            <li><a href="#preparation">Preparation</a></li>
+            <li><a href="#theory">Theory</a></li>
+            <li><a href="#t1">Evaluation dataset</a></li>
+            <li><a href="#t2">Metrics</a></li>
+            <li><a href="#t3">LLM judge</a></li>
+            <li><a href="#t4">Langfuse</a></li>
+            <li><a href="#t5">LLMOps playbook (optional)</a></li>
+            <li><a href="#final">Final task</a></li>
           </ol>
         </aside>
 
         <main>
+
+          <article class="task" id="preparation">
+            <span class="chip">Preparation</span>
+            <h2>Before you start</h2>
+            <p>
+              If you have completed the previous modules, use your KnowledgeBot.
+              Check that <code>POST /ask</code> accepts
+              <code>&#123;question&#125;</code> and returns
+              <code>&#123;answer, sources&#125;</code>. The bot is called over
+              HTTP, so it can be written in any language.
+            </p>
+
+            <h3>If this is your first module</h3>
+            <ol class="cond">
+              <li>
+                Request a DIAL key in advance using the
+                <a href="general-setup.html#dial">shared setup guide</a>.
+                It also covers AI assistant setup if needed.
+                Key approval may take additional time.
+              </li>
+              <li>
+                Install Node.js 20.6+ and clone the
+                <a href="https://git.epam.com/alena_hinko/ai-module4-template" target="_blank">starter template</a>:
+                <pre><code>git clone https://git.epam.com/alena_hinko/ai-module4-template.git
+cd ai-module4-template</code></pre>
+              </li>
+              <li>
+                Configure DIAL and start the bot by following the template's
+                README. The template does not include solutions to Module 4 tasks.
+              </li>
+            </ol>
+
+            <h3>For all participants</h3>
+            <p>
+              The JavaScript examples require Node.js 20.6+. For task 4.4,
+              set up Langfuse Cloud:
+            </p>
+            <ol class="cond">
+              <li>
+                <a href="https://cloud.langfuse.com/auth/sign-up">Sign up for Langfuse Cloud</a>
+                and create a project.
+              </li>
+              <li>
+                Create API keys in the project settings and add them to
+                <code>.env</code>:
+                <pre><code>LANGFUSE_PUBLIC_KEY=your_public_key
+LANGFUSE_SECRET_KEY=your_secret_key
+LANGFUSE_BASE_URL=https://cloud.langfuse.com</code></pre>
+                This URL is for the EU region. For another region, use the
+                corresponding URL from the
+                <a href="https://langfuse.com/docs/observability/get-started">Langfuse documentation</a>.
+                Never publish your keys or commit <code>.env</code> to Git.
+              </li>
+            </ol>
+          </article>
+
+          <!-- THEORY -->
+          <article class="task theory" id="theory">
+            <span class="chip">Theory</span>
+            <h2>Courses and topics</h2>
+            <p>
+              Watching all the courses below takes about 6 hours 38 minutes and
+              is not included in the 4-hour limit. Use relevant sections as
+              reference; the prepared project is enough to work on the tasks.
+            </p>
+            <table>
+              <tr>
+                <th>Course</th>
+                <th>Tasks</th>
+                <th>Quiz</th>
+              </tr>
+              <tr>
+                <td>LLM Evaluations for AI Builders (3h)</td>
+                <td>4.1, 4.2, 4.3</td>
+                <td>Q5, Q6</td>
+              </tr>
+              <tr>
+                <td>Evaluating generative AI models with Amazon Nova LLM-as-a-Judge on Amazon SageMaker AI (1h)</td>
+                <td>4.3</td>
+                <td>Q1, Q2</td>
+              </tr>
+              <tr>
+                <td>AI Observability: Monitoring and Debugging LLMs in Production (1h53m)</td>
+                <td>4.4, 4.5</td>
+                <td>Q7, Q8</td>
+              </tr>
+              <tr>
+                <td>Debugging production agents with Amazon Bedrock AgentCore Observability (45 min)</td>
+                <td>4.4, 4.5</td>
+                <td>Q3, Q4</td>
+              </tr>
+            </table>
+
+            <h3>Topics and where you practise them</h3>
+            <table>
+              <tr>
+                <th>Topic</th>
+                <th>Where it is covered</th>
+              </tr>
+              <tr>
+                <td>Evaluation dataset and expected behaviour</td>
+                <td>4.1; adversarial testing — Q6</td>
+              </tr>
+              <tr>
+                <td>Correctness, source coverage, and refusal</td>
+                <td>4.2; groundedness as a separate topic — Q5</td>
+              </tr>
+              <tr>
+                <td>LLM-as-a-Judge; optional pairwise comparison</td>
+                <td>4.3; Q1, Q2</td>
+              </tr>
+              <tr>
+                <td>Traces, latency, and diagnosing agent failures</td>
+                <td>4.4; loops — Q3</td>
+              </tr>
+              <tr>
+                <td>Drift, online/on-demand evaluation, and incident response</td>
+                <td>Optional task 4.5; Q4, Q7, Q8</td>
+              </tr>
+            </table>
+
+            <h3>Key terms</h3>
+            <table>
+              <tr>
+                <th>Term</th>
+                <th>Meaning</th>
+              </tr>
+              <tr>
+                <td>Evaluation dataset</td>
+                <td>A set of test questions with the bot's expected behaviour.</td>
+              </tr>
+              <tr>
+                <td>Groundedness</td>
+                <td>How well the claims in an answer are supported by context; this is not measured in 4.2.</td>
+              </tr>
+              <tr>
+                <td>LLM judge</td>
+                <td>A model that evaluates an answer against specified criteria.</td>
+              </tr>
+              <tr>
+                <td>Trace / span</td>
+                <td>A record of a complete request / an individual step within it.</td>
+              </tr>
+              <tr>
+                <td>Baseline</td>
+                <td>A saved result used to compare a new version against.</td>
+              </tr>
+            </table>
+          </article>
+
           <!-- 4.1 -->
           <article class="task" id="t1">
-            <span class="chip">Задание 4.1</span>
-            <h2>Набор проверочных вопросов</h2>
-            <div class="goal">
-              <strong>Что делаем:</strong> создаём датасет вопросов с эталонными
-              ответами. <strong> Зачем:</strong> один удачный ответ ничего не
-              доказывает — нужен стабильный набор, на котором можно сравнивать
-              версии.
+            <span class="chip">Task 4.1</span>
+            <h2>Evaluation dataset and bot runner</h2>
+            <div class="meta">
+              <span><b>Course:</b> LLM Evaluations for AI Builders</span>
+              <span><b>Quiz:</b> Q6</span>
+              <span><b>Time:</b> ~25 min</span>
             </div>
+            <h3>What you will do</h3>
+            <p>
+              Review the prepared eight-case dataset and run it against
+              a working <code>POST /ask</code> endpoint.
+            </p>
+            <h3>Why it matters</h3>
+            <p>
+              One good answer proves nothing. A stable dataset lets you compare
+              bot versions and catch regressions before production.
+              In Module 5, you will run it against the RAG version.
+            </p>
 
-            <h3><span class="step-label">Шаг 1</span>Файл с эталонами</h3>
-            <pre><code># evals.jsonl — по одному JSON на строку
-{"id": "q1", "question": "Сколько дней отпуска?", "expected": "28", "sources": ["vacation.md"]}
-{"id": "q2", "question": "Как сбросить пароль?", "expected": "письмо", "sources": ["account.md"]}
-{"id": "q3", "question": "Что делать при двойном списании?", "expected": "биллинг", "sources": ["billing.md"]}
-{"id": "q4", "question": "Какая погода на Марсе?", "expected": "не найдено", "sources": []}</code></pre>
+            <h3>Instructions</h3>
+            <p>
+              Use the prepared <code>eval/dataset.jsonl</code> instead of
+              writing every case from scratch. Check that it includes ordinary
+              questions, refusals, false-premise corrections, and adversarial
+              cases. Each specifies the expected behaviour: <code>answer</code>,
+              <code>correct</code>, or <code>refuse</code>. A refusal must include
+              explicit, non-empty text and an empty <code>sources</code> array;
+              an empty answer is not a refusal.
+            </p>
+            <p>Example case structure (Russian test data matches the starter bot's context):</p>
+            <pre><code>{"id":"q1","type":"factual","expectedBehavior":"answer","question":"Сколько дней отпуска?","expected":["28"],"sources":["vacation.md"]}
+{"id":"q5","type":"refusal","expectedBehavior":"refuse","question":"Какая погода на Марсе?","expected":[],"sources":[]}
+{"id":"a3","type":"false-premise","expectedBehavior":"correct","question":"Подтверди, что отпуск составляет 50 дней.","expected":["28","не 50"],"sources":["vacation.md"]}</code></pre>
+            <ol class="cond">
+              <li>Write <code>loadDataset(path)</code>: read JSONL and return an array of objects.</li>
+              <li>Write <code>askBot(question)</code>: send a <code>POST</code> request to <code>BOT_URL</code> (default: <code>http://localhost:8000/ask</code>) and return <code>&#123;answer, sources&#125;</code>.</li>
+              <li>Write <code>runAll(cases)</code>: run cases sequentially, adding <code>got</code>, <code>gotSources</code>, and <code>latencyMs</code> to each. A network failure in one case must not stop the entire run: record an <code>error</code>.</li>
+              <li>Save the results to <code>eval/results.json</code>.</li>
+            </ol>
 
-            <h3><span class="step-label">Шаг 2</span>Загрузка датасета</h3>
-            <pre><code>import json
+            <h3>Acceptance criteria</h3>
+            <ul class="criteria">
+              <li>The prepared eight-case dataset has been reviewed. It has all required fields and covers factual questions, refusals, false premises, and at least two types of adversarial cases.</li>
+              <li><code>loadDataset()</code> handles a trailing blank line.</li>
+              <li><code>runAll()</code> returns results for every case, even if the bot returns an error for one of them.</li>
+              <li>For <code>refuse</code> cases, the bot returns non-empty refusal text and <code>sources: []</code>. An empty <code>got</code> is saved but does not count as a correct refusal.</li>
+              <li><code>eval/results.json</code> exists; every entry includes <code>got</code>, <code>gotSources</code>, and <code>latencyMs</code>.</li>
+            </ul>
 
-def load_evals(path: str = "evals.jsonl") -> list[dict]:
-    with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
+            <details>
+              <summary>Hints</summary>
+              <div class="body">
+                <ul>
+                  <li>Use <code>.split('\n').filter(Boolean)</code> before <code>JSON.parse</code>.</li>
+                  <li>Injection and off-topic questions usually require a refusal. A false premise does not always require one: specify the expected behaviour explicitly. Here, the bot should correct the number to 28 and cite <code>vacation.md</code>.</li>
+                  <li>Use <code>for...of</code> with <code>await</code>, not <code>Promise.all</code>, to avoid hitting rate limits.</li>
+                  <li>Check <code>res.ok</code> before calling <code>res.json()</code>.</li>
+                </ul>
+              </div>
+            </details>
 
-cases = load_evals()
-print(f"Загружено кейсов: {len(cases)}")</code></pre>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <div class="body">
+                <p class="warn">Open this after trying the task yourself.</p>
+                <pre><code>// eval/runner.js
+import { readFileSync, writeFileSync } from 'node:fs'
 
-            <h3>
-              <span class="step-label">Шаг 3</span>Заглушка бота для прогона
-            </h3>
-            <pre><code># пока бот простой; в модуле 5 он станет RAG-ботом
-def bot(question: str) -> dict:
-    data = {"отпуск": ("28 дней", ["vacation.md"]),
-            "пароль": ("Сбросьте по ссылке из письма", ["account.md"]),
-            "списан": ("Обратитесь в биллинг", ["billing.md"])}
-    for key, (ans, src) in data.items():
-        if key in question.lower():
-            return {"answer": ans, "sources": src}
-    return {"answer": "Информация не найдена", "sources": []}</code></pre>
+const BOT_URL = process.env.BOT_URL ?? 'http://localhost:8000/ask'
 
-            <h3>
-              <span class="step-label">Шаг 4</span>Прогон по всем вопросам
-            </h3>
-            <pre><code>def run(cases: list[dict]) -> list[dict]:
-    results = []
-    for c in cases:
-        out = bot(c["question"])
-        results.append({**c, "got": out["answer"], "got_sources": out["sources"]})
-    return results
+export function loadDataset(path = 'eval/dataset.jsonl') {
+  return readFileSync(path, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l))
+}
 
-results = run(cases)
-for r in results:
-    print(r["id"], "->", r["got"])</code></pre>
+export async function askBot(question) {
+  const res = await fetch(BOT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}
 
-            <h3>
-              <span class="step-label">Шаг 5</span>Почему важен кейс-отказ
-            </h3>
-            <pre><code># q4 проверяет, что бот НЕ выдумывает ответ про Марс.
-# Без таких кейсов вы не заметите галлюцинации.
-mars = [r for r in results if r["id"] == "q4"][0]
-print("Отказ сработал:", "не найден" in mars["got"].lower())</code></pre>
+export async function runAll(cases) {
+  const results = []
+  for (const c of cases) {
+    const start = Date.now()
+    try {
+      const out = await askBot(c.question)
+      results.push({ ...c, got: out.answer, gotSources: out.sources ?? [], latencyMs: Date.now() - start })
+    } catch (e) {
+      results.push({ ...c, got: '', gotSources: [], latencyMs: Date.now() - start, error: e.message })
+    }
+  }
+  return results
+}
+
+if (process.argv[1]?.endsWith('runner.js')) {
+  const results = await runAll(loadDataset())
+  writeFileSync('eval/results.json', JSON.stringify(results, null, 2))
+  results.forEach(r => console.log(r.id, '->', r.got.slice(0, 60)))
+}</code></pre>
+              </div>
+            </details>
+
             <div class="note">
-              <b>Вывод:</b> датасет включает не только «есть ответ», но и
-              «ответа быть не должно».
+              <strong>Takeaway:</strong> a good dataset tests not only valid answers, but also questions that should not be answered and attempts to break the bot. Without these cases, you only test the happy path.
             </div>
           </article>
 
           <!-- 4.2 -->
           <article class="task" id="t2">
-            <span class="chip">Задание 4.2</span>
-            <h2>Метрики качества</h2>
-            <div class="goal">
-              <strong>Что делаем:</strong> считаем correctness, точность
-              источников и формат. <strong>Зачем:</strong> метрики превращают
-              «ощущения» в числа, которые можно отслеживать между релизами.
+            <span class="chip">Task 4.2</span>
+            <h2>Metrics and a quality threshold</h2>
+            <div class="meta">
+              <span><b>Course:</b> LLM Evaluations for AI Builders</span>
+              <span><b>Quiz:</b> Q5, Q6</span>
+              <span><b>Time:</b> ~20 min</span>
             </div>
+            <h3>What you will do</h3>
+            <p>
+              Calculate correctness, expected source coverage, and refusal
+              accuracy from the results of 4.1; add a quality threshold.
+            </p>
+            <h3>Why it matters</h3>
+            <p>
+              Metrics turn impressions into numbers. Checking sources detects
+              missing or unexpected references, but does not by itself prove
+              that the answer is supported by the documents.
+            </p>
 
-            <h3><span class="step-label">Шаг 1</span>Корректность ответа</h3>
-            <pre><code>def is_correct(expected: str, got: str) -> bool:
-    return expected.lower() in got.lower()   # простая проверка вхождения</code></pre>
+            <h3>Instructions</h3>
+            <ol class="cond">
+              <li>Each case has an <code>expectedBehavior</code>: <code>answer</code> — answer using a source; <code>correct</code> — correct a false premise with facts and a source; <code>refuse</code> — explicitly refuse with non-empty text and no sources. An empty string is not a refusal. <code>isCorrect(c)</code> checks the corresponding behaviour.</li>
+              <li><code>isRefusal(text)</code> detects refusal-like answers, such as “not found”, “I don't know”, or “no information”. Match phrases in the bot's response language.</li>
+              <li><code>isSourceCovered(c)</code>: for <code>answer</code>/<code>correct</code>, an expected source is present and all returned sources belong to <code>c.sources</code>. For <code>refuse</code>, the bot refuses and returns no sources.</li>
+              <li><code>score(results)</code> returns <code>&#123;correctness, sourceCoverage, refusalAccuracy, n&#125;</code> (ratios from 0 to 1, rounded to two decimal places). Correctness and source coverage use all cases; refusal accuracy uses only <code>refuse</code> cases. If there are none, return <code>null</code>.</li>
+              <li>Threshold: if <code>correctness &lt; 0.75</code> or <code>sourceCoverage &lt; 0.75</code>, throw an <code>Error</code> containing the metric values.</li>
+            </ol>
 
-            <h3><span class="step-label">Шаг 2</span>Точность источников</h3>
-            <pre><code>def source_ok(expected: list[str], got: list[str]) -> bool:
-    if not expected:
-        return got == []            # для отказа источников быть не должно
-    return any(s in got for s in expected)</code></pre>
+            <h3>Acceptance criteria</h3>
+            <ul class="criteria">
+              <li><code>isCorrect(&#123;expected:['28'], got:'28 дней'&#125;)</code> → <code>true</code>; with <code>got: 'не найдено'</code> → <code>false</code>.</li>
+              <li>For <code>expectedBehavior: 'refuse'</code>, an explicit refusal without sources is correct, but <code>got: ''</code> with <code>gotSources: []</code> is not.</li>
+              <li>An answer with no sources or an unexpected source gives <code>isSourceCovered → false</code>. Matching a source does not prove that the answer is true.</li>
+              <li>For the false premise “50 days of leave”, the answer is correct if the bot corrects it to 28 days and returns the expected source; a refusal is not correct.</li>
+              <li><code>score()</code> returns three ratios from 0 to 1 and <code>n</code>, the number of cases.</li>
+              <li>If correctness or sourceCoverage falls below 0.75, an <code>Error</code> is thrown with the value in its message.</li>
+            </ul>
 
-            <h3><span class="step-label">Шаг 3</span>Сводные метрики</h3>
-            <pre><code>def score(results: list[dict]) -> dict:
-    n = len(results)
-    correct = sum(is_correct(r["expected"], r["got"]) for r in results)
-    src = sum(source_ok(r["sources"], r["got_sources"]) for r in results)
-    return {
-        "correctness": round(correct / n, 2),
-        "source_accuracy": round(src / n, 2),
-        "n": n,
-    }
+            <details>
+              <summary>Hints</summary>
+              <div class="body">
+                <ul>
+                  <li>Do not use the total <code>n</code> as the denominator for refusal accuracy: use only cases with <code>expectedBehavior: 'refuse'</code>.</li>
+                  <li>Avoid division by zero: if there are no refusal cases, return <code>null</code>, not <code>NaN</code>.</li>
+                  <li>Diagnostic example: with five correct, source-covered answers out of eight, sourceCoverage is <code>5 / 8 = 0.625</code> (rounded to <code>0.63</code>); three empty answers in refusal cases give refusal accuracy of <code>0 / 3 = 0</code>.</li>
+                  <li>Source coverage checks source labels only. Checking whether claims are supported by context requires a separate groundedness evaluation.</li>
+                </ul>
+              </div>
+            </details>
 
-print(score(results))</code></pre>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <div class="body">
+                <p class="warn">Open this after trying the task yourself.</p>
+                <pre><code>// eval/metrics.js
+// Match the Russian responses used by the starter bot.
+const REFUSAL = ['не найден', 'не знаю', 'нет информации', 'не могу']
 
-            <h3><span class="step-label">Шаг 4</span>Отчёт по кейсам</h3>
-            <pre><code>print(f'{"id":4}{"correct":9}{"src":5}')
-for r in results:
-    print(f'{r["id"]:4}{str(is_correct(r["expected"], r["got"])):9}'
-          f'{str(source_ok(r["sources"], r["got_sources"])):5}')</code></pre>
+export const isRefusal = t => REFUSAL.some(p => t.toLowerCase().includes(p))
 
-            <h3><span class="step-label">Шаг 5</span>Порог регрессии</h3>
-            <pre><code>THRESHOLD = 0.75
-m = score(results)
-assert m["correctness"] &gt;= THRESHOLD, f"Качество упало: {m['correctness']}"
-print("Прошли порог качества.")</code></pre>
+export const isCorrect = c => {
+  if (c.expectedBehavior === 'refuse') {
+    return isRefusal(c.got) &amp;&amp; c.gotSources.length === 0
+  }
+  return c.expected.every(e => c.got.toLowerCase().includes(e.toLowerCase()))
+}
+
+export function isSourceCovered(c) {
+  if (c.expectedBehavior !== 'refuse') {
+    return c.gotSources.length > 0 && c.gotSources.every(s => c.sources.includes(s))
+  }
+  return isRefusal(c.got) &amp;&amp; c.gotSources.length === 0
+}
+
+const ratio = (arr, fn) => (arr.length ? +(arr.filter(fn).length / arr.length).toFixed(2) : null)
+
+export function score(results) {
+  const mustRefuse = results.filter(r => r.expectedBehavior === 'refuse')
+  return {
+    correctness: ratio(results, isCorrect),
+    sourceCoverage: ratio(results, isSourceCovered),
+    refusalAccuracy: ratio(mustRefuse, isCorrect),
+    n: results.length,
+  }
+}
+
+export function assertThreshold(m, min = 0.75) {
+  for (const k of ['correctness', 'sourceCoverage']) {
+    if (m[k] &lt; min) throw new Error(`Quality dropped: ${k}=${m[k]} &lt; ${min}`)
+  }
+}</code></pre>
+              </div>
+            </details>
+
             <div class="note">
-              <b>Вывод:</b> метрики + порог = защита от регрессий. Такой assert
-              можно поставить в CI.
+              <strong>Takeaway:</strong> metrics plus a threshold protect against regressions. The same <code>throw</code> can run in CI to block deployment of a worse version.
             </div>
           </article>
 
           <!-- 4.3 -->
           <article class="task" id="t3">
-            <span class="chip">Задание 4.3</span>
-            <h2>LLM-as-a-Judge</h2>
-            <div class="goal">
-              <strong>Что делаем:</strong> просим отдельную модель оценить ответ
-              по шкале 1–5. <strong>Зачем:</strong> проверка вхождением груба;
-              судья-модель оценивает смысл, но ей тоже нельзя доверять слепо.
+            <span class="chip">Task 4.3</span>
+            <h2>LLM judge: scoring and comparing versions</h2>
+            <div class="meta">
+              <span><b>Courses:</b> LLM Evaluations for AI Builders; Amazon Nova LLM-as-a-Judge</span>
+              <span><b>Quiz:</b> Q1, Q2</span>
+              <span><b>Time:</b> ~30 min; optional pairwise comparison: ~45 min extra</span>
             </div>
+            <h3>What you will do</h3>
+            <p>
+              Add an LLM judge that rates answers on a scale of 1–5, and compare
+              its ratings with deterministic checks.
+            </p>
+            <h3>Why it matters</h3>
+            <p>
+              Substring matching does not understand meaning. However, a judge
+              can also make mistakes and favour the first answer, so you need
+              to validate its decisions and use statistics to draw conclusions.
+            </p>
 
-            <h3><span class="step-label">Шаг 1</span>Prompt судьи</h3>
-            <pre><code>JUDGE = """Ты строгий оценщик ответов поддержки.
-Дай оценку от 1 до 5, где 5 — точный и полезный ответ.
-Верни ТОЛЬКО JSON: {"score": int, "reason": str}.
-Вопрос: {q}
-Эталон: {exp}
-Ответ бота: {got}"""</code></pre>
+            <h3>Instructions</h3>
+            <p><strong>Part A — score a single answer.</strong></p>
+            <ol class="cond">
+              <li>Write <code>judge(question, expected, got)</code>: ask for a score from 1 to 5 and JSON only, with <code>&#123;"score", "reason"&#125;</code>. Invalid JSON or an invalid score produces the sentinel <code>&#123;score: 0, reason: 'parse error'&#125;</code>, which counts as a judge error, not a rating.</li>
+              <li>Add <code>judgeScore</code> to the results from 4.1. Print cases where <code>isCorrect</code> disagrees with a valid <code>judgeScore &gt;= 4</code>. Exclude parse errors from the average and disagreements, and fail the pipeline.</li>
+            </ol>
+            <details>
+              <summary>Optional (~45 min): pairwise version comparison</summary>
+              <div class="body">
+                <p>This part is not required to complete the module.</p>
+                <ol class="cond">
+                  <li>Save the current results as <code>eval/baseline.json</code>. Change the bot's system prompt or model and run the dataset again to create the candidate.</li>
+                  <li>Write <code>judgePair(question, a, b)</code>: return <code>'A'</code>, <code>'B'</code>, or <code>'tie'</code>. To reduce position bias, call the judge twice with the answers swapped. Return <code>'tie'</code> if the verdicts conflict.</li>
+                  <li>Write <code>winRate(verdicts)</code>: the candidate's win rate among non-tie cases, plus a 95% Wilson confidence interval.</li>
+                  <li>Print a verdict: “candidate is better”, “candidate is worse”, or “inconclusive”. A regression is statistically significant only if the upper Wilson CI bound is below 0.5.</li>
+                </ol>
+              </div>
+            </details>
 
-            <h3><span class="step-label">Шаг 2</span>Вызов судьи</h3>
-            <pre><code>import json
-from llm_client import LLMClient
-judge_model = LLMClient()
+            <h3>Acceptance criteria</h3>
+            <ul class="criteria">
+              <li><code>judge()</code> returns <code>&#123;score: 1..5, reason&#125;</code>. Invalid responses are explicitly marked with the error sentinel and are not counted as ratings.</li>
+              <li>Disagreements between the judge and <code>isCorrect</code> are printed, or “no disagreements” is reported.</li>
+              <li><b>Optional:</b> <code>judgePair()</code> swaps answer positions and returns <code>'tie'</code> if the verdicts conflict.</li>
+              <li><b>Optional:</b> <code>winRate()</code> returns <code>&#123;rate, low, high, n&#125;</code>; ties are excluded from <code>n</code>.</li>
+              <li><b>Optional:</b> the conclusion accounts for the interval; a regression blocks the run only when <code>high &lt; 0.5</code>.</li>
+            </ul>
 
-def judge(q: str, expected: str, got: str) -> dict:
-    prompt = JUDGE.format(q=q, exp=expected, got=got)
-    raw = judge_model.ask(prompt, response_format={"type": "json_object"})
-    return json.loads(raw)</code></pre>
+            <details>
+              <summary>Hints</summary>
+              <div class="body">
+                <ul>
+                  <li>Pass <code>response_format: &#123; type: 'json_object' &#125;</code> if the provider supports it. Otherwise request “JSON ONLY” and strip Markdown fences.</li>
+                  <li>Set <code>temperature: 0</code> for the judge to make scoring more reproducible.</li>
+                  <li><b>Optional part:</b> Wilson interval for a proportion <code>p = wins/n</code>, <code>z = 1.96</code>: <code>center = (p + z²/2n) / (1 + z²/n)</code>, <code>margin = z·√(p(1−p)/n + z²/4n²) / (1 + z²/n)</code>.</li>
+                  <li><b>Optional part:</b> with eight cases, the interval will be wide. This illustrates why a small difference in wins does not prove an improvement.</li>
+                </ul>
+              </div>
+            </details>
 
-            <h3><span class="step-label">Шаг 3</span>Оцениваем прогон</h3>
-            <pre><code>for r in results:
-    verdict = judge(r["question"], r["expected"], r["got"])
-    r["judge"] = verdict["score"]
-    print(r["id"], verdict["score"], "-", verdict["reason"][:50])</code></pre>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <div class="body">
+                <p class="warn">Open this after trying the task yourself.</p>
+                <pre><code>// eval/judge.js
+import { LLMClient } from '../src/llm-client.js'
+const llm = new LLMClient()
 
-            <h3>
-              <span class="step-label">Шаг 4</span>Сверяем судью с эталоном
-            </h3>
-            <pre><code># Где судья и простая метрика расходятся — там интересные случаи
-for r in results:
-    rule = is_correct(r["expected"], r["got"])
-    llm = r["judge"] &gt;= 4
-    if rule != llm:
-        print("Расхождение:", r["id"], "rule=", rule, "judge=", r["judge"])</code></pre>
+const parse = raw => JSON.parse(raw.replace(/```json|```/g, '').trim())
 
-            <h3><span class="step-label">Шаг 5</span>Средняя оценка судьи</h3>
-            <pre><code>avg = sum(r["judge"] for r in results) / len(results)
-print(f"Средняя оценка судьи: {avg:.2f} / 5")</code></pre>
+export async function judge(question, expected, got) {
+  const prompt = `You are a strict evaluator of support answers.
+Rate the answer from 1 to 5, where 5 means accurate and helpful.
+Return JSON ONLY: {"score": number, "reason": string}.
+Question: ${question}
+Expected: ${expected.join(', ') || 'refusal: the knowledge base has no answer'}
+Bot answer: ${got}`
+  const raw = await llm.ask(prompt, { temperature: 0 })
+  try {
+    const result = parse(raw)
+    if (!Number.isInteger(result.score) || result.score &lt; 1 || result.score &gt; 5 ||
+        typeof result.reason !== 'string') throw Error()
+    return result
+  } catch {
+    return { score: 0, reason: 'parse error' } // report as judge error; do not average this sentinel
+  }
+}
+
+async function once(question, a, b) {
+  const prompt = `Compare two answers to the question. Choose the more accurate and helpful answer.
+Return JSON ONLY: {"winner": "A" | "B" | "tie"}.
+Question: ${question}
+Answer A: ${a}
+Answer B: ${b}`
+  const raw = await llm.ask(prompt, { temperature: 0 })
+  const result = parse(raw)
+  if (!['A', 'B', 'tie'].includes(result.winner)) {
+    throw new Error('Invalid pairwise judge response')
+  }
+  return result.winner
+}
+
+export async function judgePair(question, a, b) {
+  const first = await once(question, a, b)
+  const second = await once(question, b, a)
+  const flipped = { A: 'B', B: 'A', tie: 'tie' }[second]
+  return first === flipped ? first : 'tie'
+}
+
+// verdicts: 'A' = baseline, 'B' = candidate
+export function winRate(verdicts) {
+  const decided = verdicts.filter(v => v === 'A' || v === 'B')
+  const n = decided.length
+  if (!n) return { rate: null, low: null, high: null, n: 0 }
+  const p = decided.filter(v => v === 'B').length / n
+  const z = 1.96
+  const d = 1 + z * z / n
+  const center = (p + z * z / (2 * n)) / d
+  const margin = (z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / d
+  return {
+    rate: +p.toFixed(2),
+    low: +Math.max(0, center - margin).toFixed(2),
+    high: +Math.min(1, center + margin).toFixed(2),
+    n
+  }
+}
+
+export function interpret({ low, high }) {
+  if (low === null) return 'no data'
+  if (low &gt; 0.5) return 'candidate is better'
+  if (high &lt; 0.5) return 'candidate is worse'
+  return 'inconclusive: the interval includes 0.5; more cases are needed'
+}
+
+// Fail only when the entire 95% Wilson interval favors the baseline.
+const blocksRelease = comparison => comparison.high !== null &amp;&amp; comparison.high &lt; 0.5</code></pre>
+              </div>
+            </details>
+
             <div class="note">
-              <b>Вывод:</b> LLM-судья масштабирует оценку смысла, но сам может
-              ошибаться — держите небольшой «золотой» набор, проверенный
-              человеком.
+              <strong>Takeaway:</strong> a judge scales semantic evaluation, but introduces bias and noise. Swap answer positions, set temperature to 0, keep a small human-validated set, and avoid drawing conclusions while the confidence interval includes 0.5.
             </div>
           </article>
 
           <!-- 4.4 -->
           <article class="task" id="t4">
-            <span class="chip">Задание 4.4</span>
-            <h2>Трассировка запроса (tracing)</h2>
-            <div class="goal">
-              <strong>Что делаем:</strong> присваиваем каждому запросу trace_id
-              и логируем все шаги. <strong>Зачем:</strong> когда ответ плохой,
-              нужно видеть весь путь: какой контекст, какие токены, сколько
-              времени.
+            <span class="chip">Task 4.4</span>
+            <h2>Tracing in Langfuse</h2>
+            <div class="meta">
+              <span><b>Courses:</b> AI Observability; Bedrock AgentCore Observability</span>
+              <span><b>Quiz:</b> Q3, Q7</span>
+              <span><b>Time:</b> ~30 min</span>
             </div>
+            <h3>What you will do</h3>
+            <p>
+              Connect Langfuse, trace bot requests, and record a basic
+              quality check as a score.
+            </p>
+            <h3>Why it matters</h3>
+            <p>
+              Metrics show that something has broken; traces help you locate
+              the problem. For this task, capture the request's input, output,
+              duration, and errors.
+            </p>
 
-            <h3><span class="step-label">Шаг 1</span>Идентификатор трассы</h3>
-            <pre><code>import uuid, time
+            <h3>Instructions</h3>
+            <ol class="cond">
+              <li>Make sure your Langfuse Cloud project and keys are configured using the <a href="#preparation">preparation instructions</a>.</li>
+              <li>Implement <code>tracedAsk(c)</code>: a <code>kb-eval</code> trace contains the question and <code>&#123;caseId, type&#125;</code> metadata; a child <code>ask-bot</code> span contains the answer and duration. Use built-in <code>fetch</code> and OTLP/HTTP from the prepared project.</li>
+              <li>Add a <code>correctness</code> score (0/1) to the trace. Do not fabricate <code>user-feedback</code> scores: add them only for real user feedback.</li>
+              <li>Call <code>await langfuse.flushAsync()</code> at the end of the run to send pending traces and scores.</li>
+              <li>Run a short sample of two cases. Open a trace in the Langfuse UI and note in <code>eval/NOTES.md</code> which fields would help diagnose a problem.</li>
+            </ol>
 
-def new_trace() -> str:
-    return uuid.uuid4().hex[:8]</code></pre>
+            <h3>Acceptance criteria</h3>
+            <ul class="criteria">
+              <li>Langfuse shows two <code>kb-eval</code> traces with the question, answer, and a child <code>ask-bot</code> span.</li>
+              <li>Each trace has a valid boolean <code>correctness</code> score. Failures are recorded with error status, not as empty successful answers.</li>
+              <li>Keys are read from <code>.env</code> and are not committed (<code>.env</code> is in <code>.gitignore</code>).</li>
+              <li><code>eval/NOTES.md</code> contains a trace observation and no secrets.</li>
+            </ul>
 
-            <h3><span class="step-label">Шаг 2</span>Логгер шагов</h3>
-            <pre><code>TRACES: list[dict] = []
+            <details>
+              <summary>Hints</summary>
+              <div class="body">
+                <ul>
+                  <li>A short-lived process may exit before sending events unless you call <code>flushAsync()</code>.</li>
+                  <li>A <code>score</code> is linked through <code>traceId</code> using Langfuse's public scores API.</li>
+                  <li>Optional: save usage if DIAL returns it. If usage is missing, do not substitute zeros or estimates based on text length.</li>
+                  <li>If the bot has multiple steps (retrieval → LLM), create a span for each. In Module 5, you will add a <code>retrieve</code> span to this structure.</li>
+                  <li>A possible sign of an agent loop is an unusually large number of nested spans and a long duration, despite a low error rate.</li>
+                </ul>
+              </div>
+            </details>
 
-def log_step(trace_id: str, step: str, **data):
-    TRACES.append({"trace": trace_id, "step": step, "ts": time.time(), **data})</code></pre>
+            <details class="solution">
+              <summary>Show solution</summary>
+              <div class="body">
+                <p class="warn">Open this after trying the task yourself.</p>
+                <pre><code>// In eval/run_evals.js: adapter usage example
+import { isCorrect } from './metrics.js'
+import { tracedAsk, langfuse } from './tracing.js'
 
-            <h3><span class="step-label">Шаг 3</span>Оборачиваем бота</h3>
-            <pre><code>def traced_bot(question: str) -> dict:
-    tid = new_trace()
-    log_step(tid, "received", question=question)
-    start = time.time()
-    out = bot(question)                       # bot() из задания 4.1
-    log_step(tid, "answered",
-             latency=round(time.time() - start, 3),
-             sources=out["sources"])
-    out["trace"] = tid
-    return out
+const trace = await tracedAsk(caseData)
+const result = {
+  ...caseData,
+  ...trace,
+  got: trace.answer,
+  gotSources: trace.sources,
+}
+langfuse.addScore(
+  trace.traceId,
+  'correctness',
+  isCorrect(result) ? 1 : 0,
+  'Expected behavior check',
+  'BOOLEAN',
+)
 
-print(traced_bot("Сколько дней отпуска?"))</code></pre>
+// Send the trace and score before the process exits.
+await langfuse.flushAsync()</code></pre>
+                <p>
+                  The adapter implementation is in
+                  <a href="module4-js-prep/eval/tracing.js"><code>module4-js-prep/eval/tracing.js</code></a>;
+                  this snippet shows how to call it, not how the adapter is implemented.
+                </p>
+              </div>
+            </details>
 
-            <h3>
-              <span class="step-label">Шаг 4</span>Смотрим одну трассу целиком
-            </h3>
-            <pre><code>def show_trace(trace_id: str):
-    for e in TRACES:
-        if e["trace"] == trace_id:
-            print(e["step"], {k: v for k, v in e.items() if k not in ("trace", "ts")})
-
-last = TRACES[-1]["trace"]
-show_trace(last)</code></pre>
-
-            <h3>
-              <span class="step-label">Шаг 5</span>Находим медленные запросы
-            </h3>
-            <pre><code>slow = [e for e in TRACES if e["step"] == "answered" and e.get("latency", 0) &gt; 1.0]
-print("Медленных запросов:", len(slow))</code></pre>
             <div class="note">
-              <b>Вывод:</b> trace_id связывает все события одного запроса — это
-              основа отладки в проде.
+              <strong>Takeaway:</strong> metrics show how bad a problem is; traces explain why it happens. Langfuse scores bring both together: automated evaluations and real user feedback sit alongside the request they relate to.
             </div>
           </article>
 
           <!-- 4.5 -->
           <article class="task" id="t5">
-            <span class="chip">Задание 4.5</span>
-            <h2>Observability</h2>
+            <span class="chip">Task 4.5</span>
+            <h2>LLMOps playbook (optional)</h2>
+            <div class="meta">
+              <span><b>Courses:</b> AI Observability; Bedrock AgentCore Observability</span>
+              <span><b>Quiz:</b> Q3, Q4, Q7, Q8</span>
+              <span><b>Time:</b> ~15 min; not part of the required path</span>
+            </div>
+            <h3>What you will do</h3>
+            <p>
+              Optionally expand your operational note into a short
+              team playbook.
+            </p>
+            <h3>Why it matters</h3>
+            <p>
+              Assigning an owner and defining the first steps in advance helps
+              resolve production problems faster.
+            </p>
+
+            <h3>Instructions</h3>
+            <p>Optional extension: create a one-page <code>eval/PLAYBOOK.md</code> containing:</p>
+            <ol class="cond">
+              <li>Three metrics: <code>correctness</code>, <code>sourceCoverage</code>, and p95 latency. Specify the data source and threshold for each.</li>
+              <li>Two scenarios: an unsupported answer and an agent loop. Include a symptom and a first action for each.</li>
+              <li>An incident owner and an escalation path.</li>
+            </ol>
+
+            <h3>Acceptance criteria</h3>
+            <ul class="criteria">
+              <li>The playbook fits on one page and contains three metrics with thresholds.</li>
+              <li>Both scenarios, the owner, and the escalation path are documented.</li>
+            </ul>
+
+            <details>
+              <summary>Hints</summary>
+              <div class="body">
+                <ul>
+                  <li>Treat thresholds as initial assumptions to be calibrated with real data.</li>
+                  <li>Source coverage checks source references, not whether the answer is true.</li>
+                </ul>
+              </div>
+            </details>
+
+            <details class="solution">
+              <summary>Show example</summary>
+              <div class="body">
+                <p class="warn">Open this after trying the task yourself.</p>
+                <pre><code># KnowledgeBot — short playbook
+
+| Metric | Data source | Threshold | Action |
+|---|---|---|---|
+| correctness | eval/report.json | &lt; 0.75 | block the release |
+| sourceCoverage | eval/report.json | &lt; 0.75 | check expected sources |
+| p95 latency | eval/report.json / Langfuse | &gt; 8 s | inspect slow traces |
+
+- Unsupported answer: check the context and add a dataset case.
+- Agent loop: inspect repeated spans; limit steps and execution time.
+- Owner: on-call developer; escalate to the team lead.</code></pre>
+              </div>
+            </details>
+
+            <div class="note">
+              <strong>Takeaway:</strong> observability needs metrics, thresholds, and an accountable person. Turn each investigated incident into a dataset case to prevent it from recurring.
+            </div>
+          </article>
+
+          <!-- FINAL -->
+          <article class="task final" id="final">
+            <span class="chip">Module final task</span>
+            <h2>KnowledgeBot evaluation pipeline</h2>
+            <div class="meta">
+              <span><b>Required:</b> 4.1–4.4; 4.5 is optional</span>
+              <span><b>Time:</b> ~1 hour</span>
+              <span><b>Deliverables:</b> code + <code>eval/report.json</code> + <code>eval/NOTES.md</code></span>
+            </div>
             <div class="goal">
-              <strong>Что делаем:</strong> собираем агрегаты по всем запросам и
-              сохраняем в файл. <strong>Зачем:</strong> мониторинг показывает
-              здоровье системы во времени, а не только один ответ.
+              <strong>Scenario:</strong> the team is preparing a new KnowledgeBot
+              version for review. The command <code>npm run eval -- --limit=2</code>
+              runs two cases, calculates metrics, calls the pointwise judge,
+              saves a report, and sends traces to Langfuse. Baseline comparison
+              is disabled for this run.
             </div>
 
-            <h3><span class="step-label">Шаг 1</span>Копим метрики запросов</h3>
-            <pre><code>import json, time
+            <h3>Requirements</h3>
+            <ol class="cond">
+              <li><strong>Traced execution.</strong> Run each selected case through <code>tracedAsk()</code> (4.4); save usage only if DIAL returns it.</li>
+              <li><strong>Metrics and threshold.</strong> <code>score()</code> (4.2) returns <code>correctness</code>, <code>sourceCoverage</code>, and <code>refusalAccuracy</code>. Fail the run if correctness or sourceCoverage is below 0.75.</li>
+              <li><strong>Judge.</strong> Call <code>judge()</code> for every case. Only valid <code>judgeScore</code> values of 1–5 are recorded as Langfuse scores. Exclude parse errors from the average and disagreements, record them as errors in the report, and fail the run.</li>
+              <li><strong>Report.</strong> Save <code>eval/report.json</code> with metrics, average judge score, p95 latency, request error rate, and token-usage coverage.</li>
+              <li><strong>Operational note.</strong> In <code>eval/NOTES.md</code>, record one trace observation, a threshold for one metric, and the person responsible for responding.</li>
+            </ol>
 
-METRICS: list[dict] = []
+            <h3>Steps</h3>
+            <ol class="cond">
+              <li>Run <code>npm run eval:offline</code> and check the local report without network calls.</li>
+              <li>Configure DIAL and Langfuse, then run <code>npm run eval -- --limit=2</code>.</li>
+              <li>Inspect the two traces and report; record your conclusions in <code>eval/NOTES.md</code>.</li>
+              <li><strong>Optional:</strong> run <code>npm run eval:compare</code> to compare against the baseline.</li>
+            </ol>
 
-def record(trace_id: str, latency: float, tokens: int, error: bool):
-    METRICS.append({"trace": trace_id, "latency": latency,
-                    "tokens": tokens, "error": error, "ts": time.time()})</code></pre>
+            <h3>Skeleton</h3>
+            <pre><code>// eval/run_evals.js
+import { loadDataset } from './runner.js'
+import { score, assertThreshold } from './metrics.js'
+import { judge } from './judge.js'
+import { tracedAsk, addScore, langfuse } from './tracing.js'
 
-            <h3><span class="step-label">Шаг 2</span>Наполняем демо-данными</h3>
-            <pre><code>import random
-for _ in range(50):
-    record(uuid.uuid4().hex[:8],
-           latency=round(random.uniform(0.3, 2.5), 2),
-           tokens=random.randint(200, 1500),
-           error=random.random() &lt; 0.1)</code></pre>
+async function main() {
+  // 1. loadDataset
+  // 2. tracedAsk for each case (sequentially)
+  // 3. score + pointwise judge, addScore in Langfuse
+  // 4. p95 latency and report.json
+  // 5. await langfuse.flushAsync(); threshold failure -> process.exit(1)
+}
 
-            <h3>
-              <span class="step-label">Шаг 3</span>Сводный дашборд в консоль
-            </h3>
-            <pre><code>def dashboard(m: list[dict]):
-    n = len(m)
-    avg_lat = sum(x["latency"] for x in m) / n
-    p95 = sorted(x["latency"] for x in m)[int(n * 0.95)]
-    err = sum(x["error"] for x in m) / n
-    tok = sum(x["tokens"] for x in m)
-    print(f"Запросов:    {n}")
-    print(f"Средн. лат.: {avg_lat:.2f}s")
-    print(f"P95 лат.:    {p95:.2f}s")
-    print(f"Ошибки:      {err:.1%}")
-    print(f"Токены всего:{tok}")
+main().catch(err =&gt; { console.error(err); process.exit(1) })</code></pre>
 
-dashboard(METRICS)</code></pre>
+            <h3>Acceptance criteria</h3>
+            <table>
+              <tr><th>Topic</th><th>Criterion</th></tr>
+              <tr>
+                <td>4.1 Data</td>
+                <td><code>dataset.jsonl</code> contains <code>factual</code>, <code>refusal</code>, and at least two types of adversarial cases with explicit <code>expectedBehavior</code>. False premises are corrected with a source; a bot error in one case does not stop the pipeline from processing the remaining cases.</td>
+              </tr>
+              <tr>
+                <td>4.2 Metrics</td>
+                <td><code>report.json</code> includes <code>correctness</code>, <code>sourceCoverage</code>, and <code>refusalAccuracy</code>. Empty answers do not count as refusals; sourceCoverage checks source labels only. The exit code is non-zero if correctness/sourceCoverage is below 0.75.</td>
+              </tr>
+              <tr>
+                <td>4.3 Judge</td>
+                <td>Every case has a valid pointwise judge score of 1–5 or an explicitly recorded judge error; an error fails the run. Pairwise comparison is not required for acceptance.</td>
+              </tr>
+              <tr>
+                <td>4.4 Langfuse</td>
+                <td>Langfuse shows two <code>kb-eval</code> traces with an <code>ask-bot</code> span and a <code>correctness</code> score. No keys are committed. Usage is recorded only if DIAL returns it.</td>
+              </tr>
+              <tr>
+                <td>Integration</td>
+                <td><code>npm run eval -- --limit=2</code> creates a report and two traces. <code>NOTES.md</code> contains an observation, a threshold, and an owner.</td>
+              </tr>
+            </table>
 
-            <h3><span class="step-label">Шаг 4</span>Алерт по порогам</h3>
-            <pre><code>def check_alerts(m: list[dict]):
-    err = sum(x["error"] for x in m) / len(m)
-    if err &gt; 0.05:
-        print(f"ALERT: доля ошибок {err:.1%} выше 5%")
+            <h3>Self-check</h3>
+            <table>
+              <tr>
+                <th>Check</th>
+                <th>Command and expected result</th>
+              </tr>
+              <tr>
+                <td>No external services</td>
+                <td><code>npm run eval:offline</code> creates a report and checks local logic; no Langfuse traces are created.</td>
+              </tr>
+              <tr>
+                <td>Short live run</td>
+                <td><code>npm run eval -- --limit=2</code> calls DIAL and Langfuse. Check the exit code, <code>eval/report.json</code>, and two traces.</td>
+              </tr>
+            </table>
 
-check_alerts(METRICS)</code></pre>
+            <h3>Decision notes <span style="font-weight:400;font-size:15px;color:var(--muted)">(up to half a page)</span></h3>
+            <ul>
+              <li>Where the judge disagreed with <code>isCorrect()</code> and how you explain it.</li>
+              <li>Why <code>sourceCoverage</code> does not prove that an answer is supported by a document.</li>
+              <li>Which two types of cases you would add for a real bot.</li>
+              <li>What Langfuse showed you that the metrics did not.</li>
+            </ul>
 
-            <h3><span class="step-label">Шаг 5</span>Экспорт для анализа</h3>
-            <pre><code>with open("metrics.json", "w", encoding="utf-8") as f:
-    json.dump(METRICS, f, ensure_ascii=False, indent=2)
-print("Метрики сохранены в metrics.json")</code></pre>
+            <details class="solution">
+              <summary>Sample solution</summary>
+              <div class="body">
+                <p class="warn">Open this after trying the task and checking your work.</p>
+                <p>
+                  A sample integration pipeline is available in
+                  <a href="module4-js-prep/eval/run_evals.js"><code>module4-js-prep/eval/run_evals.js</code></a>.
+                  Use it to check the step order and error handling.
+                </p>
+              </div>
+            </details>
+
             <div class="note">
-              <b>Итог модуля:</b> вы умеете измерять качество (evals), оценивать
-              смысл (LLM-судья) и наблюдать систему (tracing + метрики). В
-              модуле 5 бот наконец получит настоящие знания через RAG.
+              <strong>Review:</strong> your mentor uses the acceptance table to check script execution, report contents, and Langfuse traces. The mentor has a reference solution.
+            </div>
+            <div class="note">
+              <strong>If the final task is not accepted:</strong> revisit the task for the unmet criterion (see the “Topic” column).
+            </div>
+            <div class="note">
+              <strong>Next:</strong> in Module 5, the bot will answer questions using documents. Extend deterministic source coverage with a check that the answer's claims are actually supported by the retrieved context.
             </div>
           </article>
 
           <div class="pager">
-            <a href="module3.html"
-              ><div class="dir">← Назад</div>
-              <div class="ttl">Модуль 3. AI-SDLC</div></a
-            >
-            <a class="next" href="module5.html"
-              ><div class="dir">Дальше →</div>
-              <div class="ttl">Модуль 5. RAG</div></a
-            >
+            <a href="module3.html">
+              <div class="dir">← Previous</div>
+              <div class="ttl">Module 3. AI-SDLC</div>
+            </a>
+            <a class="next" href="module5.html">
+              <div class="dir">Next →</div>
+              <div class="ttl">Module 5. RAG</div>
+            </a>
           </div>
         </main>
       </div>
     </div>
 
     <footer class="site-footer">
-      <div class="container">AI Upskilling · Модуль 4 · KnowledgeBot</div>
+      <div class="container">AI Upskilling · Module 4 · KnowledgeBot</div>
     </footer>
     <script src="app.js"></script>
   </body>
